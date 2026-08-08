@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "<6.1,>=5.2"
+djangorestframework = "*"
+psycopg = {extras = ["binary"], version = "*"}
+drf-spectacular = "*"
+python-dotenv = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-django = "*"
+
+[requires]
+python_version = "3.13"
+python_full_version = "3.13.1"
