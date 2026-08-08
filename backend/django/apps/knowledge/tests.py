@@ -1,124 +1,124 @@
-from django.urls import reverse
-
+from django.test import TestCase
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient
 
 from .models import KnowledgeResource
 
 
-class KnowledgeResourceAPITests(APITestCase):
+class KnowledgeResourceAPITests(TestCase):
     def setUp(self):
-        self.resource = KnowledgeResource.objects.create(
-            title="Attention Is All You Need",
-            description="Research paper introducing the Transformer architecture.",
-            resource_type=KnowledgeResource.ResourceType.PAPER,
-            source_url="https://arxiv.org/abs/1706.03762",
-            author="Vaswani et al.",
+        self.client = APIClient()
+
+        self.resource_1 = KnowledgeResource.objects.create(
+            title="Django REST Framework Guide",
+            description="A guide to building APIs with DRF.",
+            resource_type=KnowledgeResource.ResourceType.DOCUMENTATION,
+            source_url="https://www.django-rest-framework.org/",
+            author="Django REST Framework",
             is_active=True,
         )
 
-    def test_list_resources_returns_200(self):
+        self.resource_2 = KnowledgeResource.objects.create(
+            title="Research Paper on AI",
+            description="A research paper about artificial intelligence.",
+            resource_type=KnowledgeResource.ResourceType.PAPER,
+            source_url="https://example.com/ai-paper",
+            author="AI Researcher",
+            is_active=False,
+        )
+
+    def test_list_resources(self):
+        response = self.client.get("/api/v1/knowledge/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_filter_by_resource_type(self):
         response = self.client.get(
-            reverse("knowledge:resource-list-create")
+            "/api/v1/knowledge/",
+            {"resource_type": "paper"},
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
-
-    def test_list_resources_returns_created_resource(self):
-        response = self.client.get(
-            reverse("knowledge:resource-list-create")
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(
-            response.data[0]["title"],
-            self.resource.title,
+            response.data[0]["resource_type"],
+            "paper",
         )
 
-    def test_create_resource_returns_201(self):
+    def test_filter_by_active_status(self):
+        response = self.client.get(
+            "/api/v1/knowledge/",
+            {"is_active": "true"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertTrue(response.data[0]["is_active"])
+
+    def test_ordering_by_title(self):
+        response = self.client.get(
+            "/api/v1/knowledge/",
+            {"ordering": "title"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data[0]["title"],
+            "Django REST Framework Guide",
+        )
+
+    def test_create_resource(self):
         payload = {
-            "title": "Django REST Framework",
-            "description": "Toolkit for building Web APIs with Django.",
-            "resource_type": KnowledgeResource.ResourceType.DOCUMENTATION,
-            "source_url": "https://www.django-rest-framework.org/",
-            "author": "",
+            "title": "FastAPI Documentation",
+            "description": "Official FastAPI documentation.",
+            "resource_type": "documentation",
+            "source_url": "https://fastapi.tiangolo.com/",
+            "author": "FastAPI",
             "is_active": True,
         }
 
         response = self.client.post(
-            reverse("knowledge:resource-list-create"),
+            "/api/v1/knowledge/",
             payload,
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_201_CREATED,
-        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(
             KnowledgeResource.objects.count(),
-            2,
+            3,
         )
 
-    def test_retrieve_resource_returns_200(self):
+    def test_retrieve_resource(self):
         response = self.client.get(
-            reverse(
-                "knowledge:resource-detail",
-                kwargs={"pk": self.resource.pk},
-            )
+            f"/api/v1/knowledge/{self.resource_1.id}/"
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["title"],
-            self.resource.title,
+            "Django REST Framework Guide",
         )
 
-    def test_update_resource_returns_200(self):
-        payload = {
-            "title": "Updated Knowledge Resource",
-            "description": self.resource.description,
-            "resource_type": self.resource.resource_type,
-            "source_url": self.resource.source_url,
-            "author": self.resource.author,
-            "published_at": self.resource.published_at,
-            "is_active": self.resource.is_active,
-        }
-
-        response = self.client.put(
-            reverse(
-                "knowledge:resource-detail",
-                kwargs={"pk": self.resource.pk},
-            ),
-            payload,
+    def test_update_resource(self):
+        response = self.client.patch(
+            f"/api/v1/knowledge/{self.resource_1.id}/",
+            {
+                "title": "Updated Django REST Framework Guide",
+            },
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["title"],
-            "Updated Knowledge Resource",
+            "Updated Django REST Framework Guide",
         )
 
-    def test_delete_resource_returns_204(self):
+    def test_delete_resource(self):
         response = self.client.delete(
-            reverse(
-                "knowledge:resource-detail",
-                kwargs={"pk": self.resource.pk},
-            )
+            f"/api/v1/knowledge/{self.resource_1.id}/"
         )
 
         self.assertEqual(
@@ -127,6 +127,6 @@ class KnowledgeResourceAPITests(APITestCase):
         )
         self.assertFalse(
             KnowledgeResource.objects.filter(
-                pk=self.resource.pk
+                id=self.resource_1.id
             ).exists()
         )

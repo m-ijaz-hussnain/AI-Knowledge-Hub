@@ -9,6 +9,7 @@ djangorestframework = "*"
 psycopg = {extras = ["binary"], version = "*"}
 drf-spectacular = "*"
 python-dotenv = "*"
+django-filter = "*"
 
 [dev-packages]
 pytest = "*"
