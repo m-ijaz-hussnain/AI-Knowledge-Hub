@@ -26,6 +26,8 @@ urlpatterns = [
 
     # Core API
     path("api/v1/", include("apps.core.urls")),
+    # Knowledge API
+    path("api/v1/knowledge/", include("apps.knowledge.urls"),),
 
     # API Documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
